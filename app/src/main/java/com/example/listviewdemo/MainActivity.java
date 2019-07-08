@@ -4,9 +4,11 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -17,40 +19,66 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private List<String> mAppList = new ArrayList<>();
-    private DragDelListView listView;
+
+    private static final String TAG = "MainActivity";
+    private SideslipListView mSideslipListView;
+
+    /**
+     * 初始化数据
+     */
+    private ArrayList<String> mDataList = new ArrayList<String>() {
+        {
+            for (int i = 0; i < 50; i++) {
+                add("ListView item  " + i);
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        initView();
-        initData();
+
+        mSideslipListView = (SideslipListView) findViewById(R.id.sideslipListView);
+        mSideslipListView.setAdapter(new CustomAdapter());//设置适配器
+        //设置item点击事件
+        mSideslipListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mSideslipListView.isAllowItemClick()) {
+                    Log.i(TAG, mDataList.get(position) + "被点击了");
+                    Toast.makeText(MainActivity.this, mDataList.get(position) + "被点击了",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        //设置item长按事件
+        mSideslipListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mSideslipListView.isAllowItemClick()) {
+                    Log.i(TAG, mDataList.get(position) + "被长按了");
+                    Toast.makeText(MainActivity.this, mDataList.get(position) + "被长按了",
+                            Toast.LENGTH_SHORT).show();
+                    return true;//返回true表示本次事件被消耗了，若返回
+                }
+                return false;
+            }
+        });
     }
 
-    private void initData() {
-        for (int i = 0; i <20 ; i++) {
-          mAppList.add("listview"+i);
-        }
-        listView.setAdapter(new MyAdapter());
-    }
-
-    private void initView() {
-        listView = (DragDelListView) findViewById(R.id.listView);
-    }
     /**
      * 自定义ListView适配器
      */
-    class MyAdapter extends BaseAdapter{
-
+    class CustomAdapter extends BaseAdapter {
         @Override
         public int getCount() {
-            return mAppList.size();
+            return mDataList.size();
         }
 
         @Override
         public Object getItem(int position) {
-            return mAppList.get(position);
+            return mDataList.get(position);
         }
 
         @Override
@@ -59,51 +87,36 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public View getView(final int position, View convertView, ViewGroup parent) {
-
-            ViewHolder holder=null;
-            View menuView=null;
-            if (convertView == null) {
-                convertView = View.inflate(getApplicationContext(),
-                        R.layout.swipecontent, null);
-                menuView = View.inflate(getApplicationContext(),
-                        R.layout.swipemenu, null);
-                convertView = new DragDelItem(convertView,menuView);
-                holder=new ViewHolder(convertView);
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder viewHolder;
+            if (null == convertView) {
+                convertView = View.inflate(MainActivity.this, R.layout.item, null);
+                viewHolder = new ViewHolder();
+                viewHolder.textView = (TextView) convertView.findViewById(R.id.textView);
+                viewHolder.txtv_delete = (TextView) convertView.findViewById(R.id.txtv_delete);
+                convertView.setTag(viewHolder);
             } else {
-                holder = (ViewHolder) convertView.getTag();
+                viewHolder = (ViewHolder) convertView.getTag();
             }
-            //holder.iv_icon.setImageDrawable(item.loadIcon(getPackageManager()));
-            holder.iv_icon.setImageResource(R.mipmap.ic_launcher);
-            holder.tv_name.setText(mAppList.get(position));
+            viewHolder.textView.setText(mDataList.get(position));
             final int pos = position;
-            holder.tv_del.setOnClickListener(new View.OnClickListener() {
+            viewHolder.txtv_delete.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View arg0) {
-                    Toast.makeText(MainActivity.this, "删除:"+position, Toast.LENGTH_SHORT).show();
-                    mAppList.remove(pos);
+                public void onClick(View v) {
+                    Toast.makeText(MainActivity.this, pos + "被删除了",
+                            Toast.LENGTH_SHORT).show();
+                    mDataList.remove(pos);
                     notifyDataSetChanged();
-
+                    mSideslipListView.turnNormal();
                 }
             });
             return convertView;
         }
-        class ViewHolder {
-            ImageView iv_icon;
-            TextView tv_name;
-            TextView tv_del;
-            RelativeLayout relativeLayout;
-            public ViewHolder(View view) {
-                iv_icon = (ImageView) view.findViewById(R.id.iv_icon);
-                tv_name = (TextView) view.findViewById(R.id.tv_name);
-                tv_del=(TextView)view.findViewById(R.id.tv_del);
-                relativeLayout = (RelativeLayout) view.findViewById(R.id.rl_layout);
-                //改变relativeLayout宽度
-                WindowManager wm = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
-                int width = wm.getDefaultDisplay().getWidth();
-                relativeLayout.setMinimumWidth(width-60);
-                view.setTag(this);
-            }
-        }
     }
+
+    class ViewHolder {
+        public TextView textView;
+        public TextView txtv_delete;
+    }
+
 }
